@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ticket Support System</title>
+    <style>
+        body { font-family: sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }
+        .form-group { margin-bottom: 15px; }
+        input, textarea { width: 100%; padding: 8px; margin-top: 5px; }
+        button { background-color: #007bff; color: white; padding: 10px 15px; border: none; cursor: pointer; }
+        button:hover { background-color: #0056b3; }
+        .ticket-card { border: 1px solid #ddd; padding: 15px; margin-bottom: 10px; border-radius: 5px; }
+        .status-open { color: green; font-weight: bold; }
+        .delete-btn { background-color: #dc3545; float: right; }
+    </style>
+</head>
+<body>
+
+<h1>🎫 Ticket Support System</h1>
+
+<div style="background: #f9f9f9; padding: 20px; border-radius: 8px;">
+    <h3>Create New Ticket</h3>
+    <div class="form-group">
+        <label>Title:</label>
+        <input type="text" id="title" placeholder="e.g. Login is broken">
+    </div>
+    <div class="form-group">
+        <label>Description:</label>
+        <textarea id="description" placeholder="Describe the issue..."></textarea>
+    </div>
+    <button onclick="createTicket()">Submit Ticket</button>
+</div>
+
+<hr>
+
+<h3>Current Tickets</h3>
+<div id="ticketList">Loading...</div>
+
+<script>
+    const API_URL = '/tickets';
+
+    // 1. Load Tickets on Page Start
+    async function loadTickets() {
+        const response = await fetch(API_URL);
+        const tickets = await response.json();
+        const list = document.getElementById('ticketList');
+        list.innerHTML = '';
+
+        tickets.forEach(ticket => {
+            const div = document.createElement('div');
+            div.className = 'ticket-card';
+            div.innerHTML = `
+                    <button class="delete-btn" onclick="deleteTicket(${ticket.id})">Delete</button>
+                    <h4>${ticket.title} <span class="status-open">(${ticket.status})</span></h4>
+                    <p>${ticket.description}</p>
+                    <small>ID: ${ticket.id}</small>
+                `;
+            list.appendChild(div);
+        });
+    }
+
+    // 2. Create Ticket Function
+    async function createTicket() {
+        const title = document.getElementById('title').value;
+        const description = document.getElementById('description').value;
+
+        await fetch(API_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ title, description })
+        });
+
+        // Clear form and reload list
+        document.getElementById('title').value = '';
+        document.getElementById('description').value = '';
+        loadTickets();
+    }
+
+    // 3. Delete Ticket Function
+    async function deleteTicket(id) {
+        if(confirm('Are you sure?')) {
+            await fetch(`${API_URL}/${id}`, { method: 'DELETE' });
+            loadTickets();
+        }
+    }
+
+    // Initial Load
+    loadTickets();
+</script>
+</body>
+</html>
