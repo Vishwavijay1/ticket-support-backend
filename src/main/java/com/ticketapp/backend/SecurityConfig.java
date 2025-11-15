@@ -1,42 +1,48 @@
 package com.ticketapp.backend;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.security.authentication.AuthenticationProvider;
+import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
-import org.springframework.security.core.userdetails.User;
-import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.security.core.userdetails.UserDetailsService;
-import org.springframework.security.provisioning.InMemoryUserDetailsManager;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 
 @Configuration
 @EnableWebSecurity
 public class SecurityConfig {
 
+    @Autowired
+    private CustomUserDetailsService userDetailsService;
+
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-                .csrf(csrf -> csrf.disable()) // 1. Disable CSRF so our simple HTML form works
+                .csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(auth -> auth
-                        .anyRequest().authenticated() // 2. Lock every single URL
+                        .requestMatchers("/", "/index.html", "/register").permitAll() // Public area
+                        .anyRequest().authenticated() // Protected area (Tickets)
                 )
-                .httpBasic(Customizer.withDefaults()) // 3. Enable Pop-up Login
-                .formLogin(Customizer.withDefaults()); // 4. Enable Standard Login Form
+                .httpBasic(Customizer.withDefaults())
+                .formLogin(Customizer.withDefaults());
 
         return http.build();
     }
 
     @Bean
-    public UserDetailsService userDetailsService() {
-        // This replaces the application.properties user settings!
-        UserDetails admin = User.withDefaultPasswordEncoder() // Using default encoder for demo
-                .username("admin")
-                .password("password123")
-                .roles("ADMIN")
-                .build();
+    public AuthenticationProvider authenticationProvider() {
+        DaoAuthenticationProvider provider = new DaoAuthenticationProvider();
+        provider.setUserDetailsService(userDetailsService); // Use our DB logic
+        provider.setPasswordEncoder(passwordEncoder()); // Use encryption
+        return provider;
+    }
 
-        return new InMemoryUserDetailsManager(admin);
+    @Bean
+    public PasswordEncoder passwordEncoder() {
+        return new BCryptPasswordEncoder();
     }
 }
